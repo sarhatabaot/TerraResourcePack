@@ -1,0 +1,287 @@
+# Pack info
+id: TEMPLATE
+  # The ID of your configuration pack
+  # Every pack.yml will require an ID
+  # so that Terra can correctly identify
+  # and load the pack
+  #
+  # To generate a world using this pack
+  # with Multiverse, use the following command:
+  # /mvc <world name> normal -g terra:TEMPLATE
+
+author: Astrash
+  # Self explanatory - the author of the pack
+
+version: "1.0.0 for Terra v4.3.0-beta+"
+  # The version of the pack (can be named whatever).
+  # In this case, I've included the Terra
+  # version this pack was written for.
+
+
+
+noise:
+  # The noise key is where you can define your own noise functions
+  # for biomes to use. Noise can get pretty complex, but here is
+  # a super simple example noise configuration to get started.
+
+  simplex:  # 'simplex' is a user-defined name that is
+            # used to refer to in biome equations (explained later on)
+            # and can be arbitrarily named
+
+    # You can refer to the wiki for a
+    # explanation of these options, and more
+    # under 'Noise Configuration'
+    dimensions: 2
+    type: OpenSimplex2
+    frequency: 0.0075
+
+
+
+biomes:
+  # Biomes is a REQUIRED key in any pack.yml that defines
+  # the behaviour of how biomes are arranged in the world.
+  # There are many options available under biome, and only
+  # a few of them will be covered here - please refer to
+  # the wiki for a full list.
+
+  type: PIPELINE
+    # The 'Biome Provider Type'
+    # There are several options including:
+    # - SINGLE
+    #     Generate only one biome. Typically used for debugging.
+    # - IMAGE
+    #     Arrange biomes based off an image.
+    #     Typically used for hand-placed biome arrangements.
+    # - PIPELINE
+    #     Arrange biomes procedurally through the 'Biome Pipeline'.
+    #     This is both the most complicated option, but also will be
+    #     the most used for any given pack.
+
+  biome: PLAINS
+    # This key is only applicable when the biome
+    # provider type is set to SINGLE. As you can guess,
+    # this determines what that single biome will be.
+
+  resolution: 3
+    # Resolution scales the size of both
+    # the image provider, and pipeline.
+    # For example, a resolution of 3 would
+    # make everything triple the size (in terms of width / height)
+    # since each 'pixel' gets scaled by a factor of 3.
+    
+    # Something to note is that lower resolutions contain
+    # significantly more detail in a smaller space, thus
+    # requiring more calculation. This will result in
+    # significant performance decreases and I highly recommend
+    # not going below 3. Conversely, increasing the resolution
+    # will grant performance boosts quadratically, at the cost
+    # of blockier biome blends (which can be mitigated
+    # in the next section).
+
+    #   Resolution = 1         Resolution = 2
+    #
+    #   ████    ████      ████████        ████████
+    #   ████    ████      ████████        ████████
+    #       ████          ████████        ████████
+    #     ████████        ████████        ████████
+    #     ████████                ████████
+    #     ██    ██                ████████
+    #         ^               ████████████████
+    #    More detail          ████████████████   Less detail
+    #    at the cost of       ████████████████ < but more
+    #    performance          ████████████████   performant
+    #                         ████        ████
+    #                         ████        ████
+
+    # NOTE: Resolution must be an integer!
+
+  blend:
+    # Related to resolution, blend will jitter
+    # hard edges that are produced at higher resolutions
+    # to reduce the blockiness, allowing for smoother
+    # transitions between biomes while staying performant.
+
+    amplitude: 1.75
+      # Amplitude dictates how far biomes will
+      # be blended between biome borders.
+      # Higher amplitude = more blending.
+
+    noise:
+      # The noise configuration that
+      # dictates how things get blended
+      type: OpenSimplex2
+      frequency: 0.12
+
+  pipeline:
+    # The following keys will be specific to the PIPELINE
+    # provider type, but before covering some of the basic
+    # pipeline options, I'd like to give a brief explanation
+    # of what exactly the 'biome pipeline' is.
+    #
+    # Essentially you can think about the pipeline like a procedurally
+    # generated image, that has a bunch of effects and transformations
+    # applied to it. However instead of pixels in that generated image,
+    # it would be biomes.
+    #
+    # You start with a beginning 'image' defined under the source key,
+    # then each 'effect', defined as a list under the stages key gets
+    # seqentially applied to that starting image. These filters include
+    # 'Expanders', and 'Mutators'. Expanders are simple, they make your
+    # image bigger - resulting in bigger biomes. Mutators have a bit more
+    # to them and can do things like replace specific biomes with
+    # a list of other biomes, or make one biome border another
+    # (for example beaches bordering land).
+    #
+    # NOTE: The pipeline key will be ignored if the
+    #       provider is not set to PIPELINE.
+
+    source:
+      # Here is the base 'image' as explained earlier.
+      # This will act as the base of your biome arrangement, and is
+      # typically used for arranging stuff like continents / land to ocean
+
+      type: NOISE # Currently the only option
+  
+      noise:  # The noise configuration that
+              # shapes your base image
+        dimensions: 2
+        type: OpenSimplex2
+        frequency: 0.04
+
+      biomes:
+        # A weighted list of biomes that gets applied to the noise
+
+        PLAINS: 2 # We will treat the PLAINS biome as a placeholder
+        OCEAN: 1  # for land and the OCEAN as the... ocean.
+                  # Something to note here is that PLAINS has
+                  # a weight of 2, meaning that it will take up
+                  # roughly twice the space of OCEAN - meaning there
+                  # will be twice* as much land as there is water!
+
+    stages:
+      # Here are where the 'filters' get applied in
+      # sequence to the base we defined earlier under source.
+      #
+      # Because stages can affect every subsequent
+      # stage, the order of operations is very important.
+      #
+      # Stages at the top are applied first, meaning
+      # that large scale modifications that subsequent
+      # mutators and expanders rely upon should be first.
+      #
+      # For example, you will want to assign climates first
+      # before you assign the biomes within the climates.
+
+      # Here is our first mutator that will be applied to the source.
+      - mutate:
+          type: REPLACE
+          # The replace mutator is pretty self-explanatory, it
+          # replaces one thing with another thing. In this case
+          # those things are biomes.
+
+          from: "BIOME:PLAINS"
+            # Here we define what exactly we are replacing.
+            # In this case we are replacing anywhere that
+            # is assigned to the PLAINS biome. If you recall
+            # from earlier, we treated PLAINS as our placeholder
+            # for land, meaning here we are basically assigning the
+            # biomes we want to replace land with.
+  
+          to:
+            # Here is another weighted list
+            # similar to the one we used in our source.
+            # They'll be showing up very often so get
+            # familiar with the concept!
+            # We will be replacing any area that is the
+            # PLAINS biome with this weighted list:
+            - FOREST: 2
+            - PLAINS: 1 # We can include a biome in its
+                        # own replacement list, meaning
+                        # part of it will still remain
+                        # after the mutator has been applied.
+
+          noise:
+            # The noise function that will determine
+            # the shape of the arrangement of biomes
+            # that will replace the PLAINS biome.
+            # This behaves similarly to how the 'noise: '
+            # for the source arranges biomes.
+            type: OpenSimplex2
+            frequency: 0.03
+
+
+      # The second mutator - changes here will be applied AFTER
+      # the land biomes are arranged using the replace mutator above.
+      - mutate: 
+          type: BORDER
+            # The border mutator is similar to replace in
+            # a sense that it also replaces biomes.
+            # The difference is that the border only replaces
+            # specified biome(s) where they border other biome(s).
+
+          from: OCEAN
+            # Here is where we specify what is going to
+            # be surrounded by a border of another biome.
+            # In this case, instead of prefixing "BIOME:"
+            # like the above mutator, we can instead provide
+            # something called a tag. 
+            # Tags are a special system for categorizing
+            # biomes, such that they can easily be assigned
+            # to various mutators within the biome pipeline.
+            # Tags are user-defined and can be arbitrarily
+            # assigned within each biome configuration.
+            #
+            # Every ocean based biome in this pack will have
+            # the OCEAN tag applied to it, meaning that every
+            # biome we have tagged with OCEAN will have this
+            # border mutator applied to it.
+
+          to:
+            - BEACH: 1
+            # A weighted list of biomes we want to border
+            # the biome(s) specified in the 'from: ' key.
+            # In this case, we want the BEACH biome to
+            # border every biome tagged with 'OCEAN'.
+
+          replace: LAND
+            # Finally we decide what will be replaced.
+            # We specify the LAND tag, meaning that anywhere
+            # that is tagged LAND that borders a biome tagged OCEAN
+            # will be replaced with the BEACH biome. 
+
+            # Something to note is that both the 'from: ' and
+            # 'replace: ' keys should specify a tag (technically
+            # the BIOME: prefix is also a tag!), whereas the
+            # 'to: ' key should specify a biome ID.
+
+          noise:
+            type: Constant
+            # Since we only have one biome under 'to: ', we
+            # can just use the constant noise type which means Terra
+            # won't have to do unnecessary noise calculations.
+
+      - expand:
+          type: FRACTAL
+          noise:
+            type: WhiteNoise
+            salt: 1
+      - expand:
+          type: FRACTAL
+          noise:
+            type: WhiteNoise
+            salt: 2
+      - mutate:
+          type: SMOOTH
+          noise:
+            type: WhiteNoise
+            salt: 1
+      - mutate:
+          type: SMOOTH
+          noise:
+            type: WhiteNoise
+            salt: 2
+      - mutate:
+          type: SMOOTH
+          noise:
+            type: WhiteNoise
+            salt: 3
